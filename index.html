@@ -1186,6 +1186,21 @@ function gotoView(v) {
 }
 
 /* ── CHAT ──────────────────────────────────────────── */
+function classifyMsg(msg) {
+  const m = msg.toLowerCase().trim();
+  const GREETINGS = ['halo','hai','hi','hei','hey','selamat','assalamu','waalaikum','pagi','siang','sore','malam','apa kabar','gimana kabar'];
+  const THANKS = ['terima kasih','makasih','thanks','thank you','thx','tq','terimakasih','syukran'];
+  if (GREETINGS.some(g => m.includes(g))) return 'greet';
+  if (THANKS.some(t => m.includes(t))) return 'thanks';
+  const FOOD = ['harga','berapa','murah','mahal','beli','jual','dimana','di mana','pasar','toko','cabai','cabe','bawang','tomat','beras','ayam','ikan','telur','daging','tempe','tahu','sayur','buah','minyak','gula','garam','tepung','wortel','kentang','kangkung','bayam','udang','sawi','kol','jahe','kunyit','lengkuas','serai','ketumbar','merica','bumbu','santan','kelapa','pisang','semangka','jeruk','apel','rempah','lombok','terasi','kecap','cuka'];
+  if (FOOD.some(k => m.includes(k))) return 'relevant';
+  if (window.allPrices && allPrices.some(p => {
+    const name = (p.product_name||'').toLowerCase();
+    return name.split(' ').some(w => w.length > 2 && m.includes(w));
+  })) return 'relevant';
+  return 'irrelevant';
+}
+
 async function doChat() {
   const inp = document.getElementById('cInp');
   const msg = inp.value.trim();
@@ -1194,6 +1209,31 @@ async function doChat() {
   document.getElementById('sBtnC').disabled = true;
   addMsg('u', msg);
   chatHist.push({ role:'user', content:msg });
+
+  const kind = classifyMsg(msg);
+
+  if (kind === 'greet') {
+    const reply = 'Halo! Selamat datang di HanaPrice 🌿 Ada yang bisa aku bantu soal harga bahan pokok di Banda Aceh?';
+    addMsg('b', reply);
+    chatHist.push({ role:'assistant', content:reply });
+    document.getElementById('sBtnC').disabled = false;
+    return;
+  }
+  if (kind === 'thanks') {
+    const reply = 'Sama-sama! Semoga informasi harganya membantu ya 😊';
+    addMsg('b', reply);
+    chatHist.push({ role:'assistant', content:reply });
+    document.getElementById('sBtnC').disabled = false;
+    return;
+  }
+  if (kind === 'irrelevant') {
+    const reply = 'Maaf, aku hanya bisa membantu soal harga bahan pokok di Banda Aceh. Coba tanyakan harga cabai, beras, ayam, atau bahan pokok lainnya ya!';
+    addMsg('b', reply);
+    chatHist.push({ role:'assistant', content:reply });
+    document.getElementById('sBtnC').disabled = false;
+    return;
+  }
+
   const tid = addTyping();
 
   const ctx = allPrices.slice(0,60).map(p =>
@@ -1203,15 +1243,20 @@ async function doChat() {
   const sys = `Kamu adalah asisten AI HanaPrice, membantu mencari harga bahan pokok termurah di Banda Aceh.\n\nDATA HARGA TERKINI:\n${ctx}\n\nATURAN:\n- Jawab dalam bahasa Indonesia yang santai dan ramah\n- Sebutkan lokasi termurah beserta harganya\n- Sertakan link Google Maps jika tersedia\n- Jika data tidak ada, bilang jujur\n- Maksimal 4 kalimat`;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json', 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true' },
-      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:512, system:sys, messages:chatHist.slice(-10) })
+    const res = await fetch('http://localhost:11434/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: OLLAMA_MODEL,
+        stream: false,
+        messages: [{ role: 'system', content: sys }, ...chatHist.slice(-10)]
+      })
     });
     removeTyping(tid);
     if (!res.ok) throw new Error();
     const d = await res.json();
-    const reply = d.content?.[0]?.text || 'Maaf, tidak ada respons.';
+    const raw = d.message?.content || 'Maaf, tidak ada respons.';
+    const reply = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim() || 'Maaf, tidak ada respons.';
     addMsg('b', reply);
     chatHist.push({ role:'assistant', content:reply });
   } catch {

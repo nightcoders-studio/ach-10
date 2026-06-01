@@ -73,6 +73,10 @@ body {
     overflow: hidden;
     box-shadow: 0 12px 60px rgba(20,70,35,.22);
   }
+  /* tabs harus bisa scroll horizontal meski parent overflow:hidden */
+  .dash-pad { overflow-x: clip; }
+  .tabs { overflow-x: scroll !important; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
 }
 
 /* ═══ SCROLLBAR ═════════════════════════════════════════ */
@@ -129,6 +133,9 @@ body {
   background: var(--surface);
   border-top: 1px solid var(--border);
   display: flex;
+  position: sticky;
+  bottom: 0;
+  z-index: 50;
 }
 .nbtn {
   flex: 1; display: flex; flex-direction: column; align-items: center;
@@ -162,7 +169,11 @@ body {
   display: flex; gap: 7px; overflow-x: auto;
   scrollbar-width: none; margin-bottom: 14px;
   padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  cursor: grab;
 }
+.tabs:active { cursor: grabbing; }
 .tabs::-webkit-scrollbar { display: none; }
 .tab {
   flex-shrink: 0; padding: 5px 13px;
@@ -319,6 +330,32 @@ body {
 .fmsg.ok { background: var(--g100); color: var(--g600); }
 .fmsg.err { background: #fde8e8; color: #c53030; }
 
+/* tag selector */
+.tag-wrap {
+  display: flex; flex-wrap: wrap; gap: 7px; margin-top: 2px;
+}
+.ttag {
+  padding: 5px 12px; border: 1.5px solid var(--border); border-radius: 99px;
+  font-family: var(--fb); font-size: .76rem; font-weight: 500;
+  color: var(--txm); background: var(--surface); cursor: pointer;
+  transition: all .18s; white-space: nowrap;
+}
+.ttag.on { background: var(--g500); border-color: var(--g500); color: #fff; }
+
+/* photo upload */
+.photo-upload {
+  width: 100%; height: 120px; border: 1.5px dashed var(--border);
+  border-radius: var(--rsm); background: var(--bg);
+  cursor: pointer; display: flex; align-items: center;
+  justify-content: center; overflow: hidden; transition: border-color .2s;
+  position: relative;
+}
+.photo-upload:hover { border-color: var(--g400); }
+.photo-placeholder {
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  color: var(--txs); font-size: .78rem; pointer-events: none;
+}
+
 /* ═══ MODAL ══════════════════════════════════════════════ */
 .overlay {
   position: fixed; inset: 0; background: rgba(10,25,15,.45);
@@ -442,8 +479,56 @@ body {
     <div class="rpad">
       <h2 class="rttl">Laporkan Harga 📝</h2>
       <p class="rsub">Bantu komunitas dengan melaporkan harga pasar hari ini</p>
-      <div class="field"><label>Produk *</label><select id="rProd"><option value="">Pilih produk...</option></select></div>
-      <div class="field"><label>Toko / Pasar *</label><select id="rLoc"><option value="">Pilih lokasi...</option></select></div>
+      <div class="field">
+        <label>Nama Produk *</label>
+        <input type="text" id="rProdName" placeholder="contoh: Cabai Merah, Beras, Tempe…" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Kategori / Tag</label>
+        <div class="tag-wrap" id="tagWrap">
+          <button type="button" class="ttag" onclick="toggleTag(this,'Sayuran')">🥬 Sayuran</button>
+          <button type="button" class="ttag" onclick="toggleTag(this,'Bumbu')">🧄 Bumbu</button>
+          <button type="button" class="ttag" onclick="toggleTag(this,'Protein')">🥩 Protein</button>
+          <button type="button" class="ttag" onclick="toggleTag(this,'Pokok')">🌾 Pokok</button>
+          <button type="button" class="ttag" onclick="toggleTag(this,'Snack')">🍪 Snack</button>
+          <button type="button" class="ttag" onclick="toggleTag(this,'Minuman')">🥤 Minuman</button>
+          <button type="button" class="ttag" onclick="toggleTag(this,'Buah')">🍉 Buah</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Nama Toko / Pasar *</label>
+        <input type="text" id="rShopName" placeholder="contoh: Toko Pak Udin, Pasar Peunayong…" autocomplete="off">
+      </div>
+<div class="field">
+        <label>Kecamatan</label>
+        <select id="rArea">
+          <option value="">Pilih kecamatan...</option>
+          <option value="Kec. Baiturrahman">Kec. Baiturrahman</option>
+          <option value="Kec. Jaya Baru">Kec. Jaya Baru</option>
+          <option value="Kec. Kuta Alam">Kec. Kuta Alam</option>
+          <option value="Kec. Kuta Raja">Kec. Kuta Raja</option>
+          <option value="Kec. Lueng Bata">Kec. Lueng Bata</option>
+          <option value="Kec. Meuraxa">Kec. Meuraxa</option>
+          <option value="Kec. Syiah Kuala">Kec. Syiah Kuala</option>
+          <option value="Kec. Ulee Kareng">Kec. Ulee Kareng</option>
+          <option value="Kec. Banda Raya">Kec. Banda Raya</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Link Google Maps (opsional)</label>
+        <input type="url" id="rGmaps" placeholder="https://maps.app.goo.gl/…">
+      </div>
+      <div class="field">
+        <label>Foto Produk / Toko (opsional)</label>
+        <div class="photo-upload" id="photoUpload" onclick="document.getElementById('rPhoto').click()">
+          <input type="file" id="rPhoto" accept="image/*" style="display:none" onchange="previewPhoto(this)">
+          <div class="photo-placeholder" id="photoPlaceholder">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+            <span>Tap untuk upload foto</span>
+          </div>
+          <img id="photoPreview" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:var(--rsm)">
+        </div>
+      </div>
       <div class="field"><label>Harga (Rp) *</label><input type="number" id="rPrice" placeholder="contoh: 45000" min="0"></div>
       <div class="field"><label>Nama kamu (opsional)</label><input type="text" id="rName" placeholder="Anonim"></div>
       <div class="field"><label>Catatan (opsional)</label><input type="text" id="rNote" placeholder="misal: harga pagi, stok banyak"></div>
@@ -542,18 +627,10 @@ async function loadPrices() {
   }
 }
 async function loadProds() {
-  try {
-    prods = await sb.get('products', '?order=name.asc');
-    const s = document.getElementById('rProd');
-    prods.forEach(p => { const o = document.createElement('option'); o.value=p.id; o.textContent=`${p.name} (per ${p.unit})`; s.appendChild(o); });
-  } catch {}
+  // produk sekarang diisi manual, tidak perlu dropdown
 }
 async function loadLocs() {
-  try {
-    locs = await sb.get('locations', '?order=name.asc');
-    const s = document.getElementById('rLoc');
-    locs.forEach(l => { const o = document.createElement('option'); o.value=l.id; o.textContent=`${l.name} — ${l.area}`; s.appendChild(o); });
-  } catch {}
+  // lokasi sekarang diisi manual (nama toko + area)
 }
 
 /* ── RENDER ────────────────────────────────────────── */
@@ -616,22 +693,68 @@ function openModal(i, raw) {
 }
 
 /* ── REPORT ────────────────────────────────────────── */
+let selectedTag = '';
+function toggleTag(el, cat) {
+  document.querySelectorAll('.ttag').forEach(t => t.classList.remove('on'));
+  if (selectedTag === cat) { selectedTag = ''; }
+  else { el.classList.add('on'); selectedTag = cat; }
+}
+function previewPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('photoPreview').src = e.target.result;
+    document.getElementById('photoPreview').style.display = 'block';
+    document.getElementById('photoPlaceholder').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
 async function doReport() {
-  const pid = document.getElementById('rProd').value;
-  const lid = document.getElementById('rLoc').value;
-  const pr  = document.getElementById('rPrice').value;
-  const nm  = document.getElementById('rName').value || 'Anonim';
-  const nt  = document.getElementById('rNote').value;
+  const prodName = document.getElementById('rProdName').value.trim();
+  const shopName = document.getElementById('rShopName').value.trim();
+  const area     = document.getElementById('rArea').value;
+  const gmaps    = document.getElementById('rGmaps').value.trim();
+  const pr       = document.getElementById('rPrice').value;
+  const nm       = document.getElementById('rName').value || 'Anonim';
+  const nt       = document.getElementById('rNote').value;
+  const cat      = selectedTag || 'Pokok';
   const msg = document.getElementById('fMsg');
   const btn = document.getElementById('rBtn');
-  if (!pid||!lid||!pr) { showMsg(msg,'err','⚠️ Produk, lokasi, dan harga wajib diisi!'); return; }
+  if (!prodName || !shopName || !pr) { showMsg(msg,'err','⚠️ Nama produk, nama toko, dan harga wajib diisi!'); return; }
   btn.disabled = true; btn.textContent = 'Menyimpan…';
   try {
-    await sb.post('prices', { product_id:pid, location_id:lid, price:parseInt(pr), reported_by:nm, note:nt });
+    // Cari atau buat produk
+    let prodList = await sb.get('products', `?name=eq.${encodeURIComponent(prodName)}&limit=1`);
+    let prodId;
+    if (prodList.length) {
+      prodId = prodList[0].id;
+    } else {
+      const newProd = await sb.post('products', { name: prodName, category: cat, unit: 'kg' });
+      prodId = newProd[0]?.id;
+    }
+    // Cari atau buat lokasi
+    let locList = await sb.get('locations', `?name=eq.${encodeURIComponent(shopName)}&area=eq.${encodeURIComponent(area)}&limit=1`);
+    let locId;
+    if (locList.length) {
+      locId = locList[0].id;
+    } else {
+      const locBody = { name: shopName, area: area };
+      if (gmaps) locBody.gmaps_link = gmaps;
+      const newLoc = await sb.post('locations', locBody);
+      locId = newLoc[0]?.id;
+    }
+    await sb.post('prices', { product_id: prodId, location_id: locId, price: parseInt(pr), reported_by: nm, note: nt });
     showMsg(msg,'ok','✅ Terima kasih! Harga berhasil dilaporkan.');
-    ['rProd','rLoc','rPrice','rName','rNote'].forEach(id => document.getElementById(id).value='');
+    ['rProdName','rShopName','rGmaps','rPrice','rName','rNote'].forEach(id => document.getElementById(id).value='');
+    document.querySelectorAll('.ttag').forEach(t => t.classList.remove('on'));
+    selectedTag = '';
+    document.getElementById('photoPreview').style.display = 'none';
+    document.getElementById('photoPlaceholder').style.display = 'flex';
+    document.getElementById('rPhoto').value = '';
     await loadPrices();
-  } catch { showMsg(msg,'err','❌ Gagal menyimpan. Periksa koneksi.'); }
+  } catch(e) { showMsg(msg,'err','❌ Gagal menyimpan. Periksa koneksi.'); }
   btn.disabled = false; btn.textContent = 'Kirim Laporan Harga';
 }
 function showMsg(el,cls,txt) {
@@ -723,6 +846,25 @@ function addTyping() {
   w.appendChild(d); w.scrollTop=w.scrollHeight; return id;
 }
 function removeTyping(id) { document.getElementById(id)?.remove(); }
+
+/* ── TABS DRAG SCROLL (desktop) ─────────────────────── */
+(function() {
+  const tabs = document.getElementById('tabs');
+  let isDown = false, startX, scrollLeft;
+  tabs.addEventListener('mousedown', e => {
+    isDown = true; tabs.classList.add('dragging');
+    startX = e.pageX - tabs.offsetLeft;
+    scrollLeft = tabs.scrollLeft;
+  });
+  tabs.addEventListener('mouseleave', () => { isDown = false; tabs.classList.remove('dragging'); });
+  tabs.addEventListener('mouseup', () => { isDown = false; tabs.classList.remove('dragging'); });
+  tabs.addEventListener('mousemove', e => {
+    if (!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - tabs.offsetLeft;
+    tabs.scrollLeft = scrollLeft - (x - startX);
+  });
+})();
 
 /* ── UTILS ─────────────────────────────────────────── */
 function x(s) { return s==null?'':String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }

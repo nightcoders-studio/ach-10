@@ -455,7 +455,7 @@ body {
       <div class="chat-hdr-ttl">🤖 Tanya AI HanaPrice</div>
       <div class="chat-hdr-sub">
         <span class="dot"></span>
-        Powered by Claude · Data real-time dari pasar
+        Powered by Qwen3 (Lokal) · Data real-time dari pasar
       </div>
     </div>
     <div class="msgs" id="msgs">
@@ -798,20 +798,22 @@ async function doChat() {
   const sys = `Kamu adalah asisten AI HanaPrice, membantu mencari harga bahan pokok termurah di Banda Aceh.\n\nDATA HARGA TERKINI:\n${ctx}\n\nATURAN:\n- Jawab dalam bahasa Indonesia yang santai dan ramah\n- Sebutkan lokasi termurah beserta harganya\n- Sertakan link Google Maps jika tersedia\n- Jika data tidak ada, bilang jujur\n- Maksimal 4 kalimat`;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('http://localhost:11434/api/chat', {
       method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true'
-      },
-      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:512, system:sys, messages:chatHist.slice(-10) })
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({
+        model: 'qwen3:1.7b',
+        stream: false,
+        messages: [
+          { role:'system', content: sys },
+          ...chatHist.slice(-10)
+        ]
+      })
     });
     removeTyping(tid);
     if (!res.ok) throw new Error();
     const d = await res.json();
-    const reply = d.content?.[0]?.text || 'Maaf, tidak ada respons.';
+    const reply = d.message?.content || 'Maaf, tidak ada respons.';
     addMsg('b', reply);
     chatHist.push({ role:'assistant', content:reply });
   } catch {

@@ -1,4 +1,6 @@
-# HanaPrice MVP — Panduan Lengkap
+pass supabase : arenikhwanfadhil
+
+ # HanaPrice MVP — Panduan Lengkap
 
 > Platform crowdsourced perbandingan harga pasar Banda Aceh + Chatbot AI
 

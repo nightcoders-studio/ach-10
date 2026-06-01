@@ -1,4 +1,4 @@
-# HargaAceh MVP — Panduan Lengkap
+# HanaPrice MVP — Panduan Lengkap
 
 > Platform crowdsourced perbandingan harga pasar Banda Aceh + Chatbot AI
 
